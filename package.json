@@ -1,0 +1,19 @@
+{
+    "name": "model",
+    "description": "model",
+    "version": "0.0.0",
+    "author": {
+        "name": "serandives",
+        "email": "serandives@gmail.com"
+    },
+    "dependencies": {
+        "lodash": "4.17.4",
+        "mongoose": "5.1.8",
+        "logger": "serandules/logger#master",
+        "errors": "serandules/errors#master"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git://github.com/serandules/model.git"
+    }
+}
