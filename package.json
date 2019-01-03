@@ -9,8 +9,10 @@
     "dependencies": {
         "lodash": "4.17.4",
         "mongoose": "5.1.8",
+        "async": "1.*",
         "logger": "serandules/logger#master",
-        "errors": "serandules/errors#master"
+        "errors": "serandules/errors#master",
+        "utils": "serandules/utils#master"
     },
     "repository": {
         "type": "git",

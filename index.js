@@ -1,9 +1,11 @@
 var log = require('logger')('model:index');
+var async = require('async');
 var _ = require('lodash');
 var mongoose = require('mongoose');
 var ObjectId = mongoose.Types.ObjectId;
 
 var errors = require('errors');
+var utils = require('utils');
 var validators = require('validators');
 
 var validate = function (name, ctx, done) {
@@ -146,7 +148,7 @@ exports.findOne = function (ctx, done) {
       if (!o) {
         return done(errors.notFound());
       }
-      done(null, o);
+      utils.visibles(ctx, utils.json(o), done);
     });
   });
 };
@@ -193,6 +195,10 @@ exports.find = function (ctx, done) {
       invert = natural;
       sorter = invert ? hint : sort;
     }
+    var fields = _.clone(search.fields);
+    if (fields) {
+      fields.visibility = 1;
+    }
     var options = {};
     if (search.cursor) {
       if (natural) {
@@ -201,25 +207,40 @@ exports.find = function (ctx, done) {
         options.max = search.cursor;
       }
     }
+    var filter = function (o) {
+      if (!fields) {
+        return o;
+      }
+      if (fields.visibility) {
+        return o;
+      }
+      var filtered = {};
+      Object.keys(o).forEach(function (field) {
+        if (fields[field]) {
+          filtered[field] = o[field];
+        }
+      });
+      return filtered;
+    };
     // TODO: build proper cursor with fields in order
     ctx.model.find(query)
       .sort(sorter)
-      .select(search.fields)
+      .select(fields)
       .limit(count)
       .hint(hint)
       .setOptions(options)
-      .exec(function (err, o) {
+      .exec(function (err, oo) {
         if (err) {
           return done(err);
         }
         var left = null;
         var right = null;
         if (natural) {
-          if (o.length === count) {
+          if (oo.length === count) {
             right = {
               query: query,
               sort: sort,
-              cursor: exports.cursor(hint, o.pop()),
+              cursor: exports.cursor(hint, oo.pop()),
               direction: 1
             };
           }
@@ -240,12 +261,12 @@ exports.find = function (ctx, done) {
               direction: 1
             };
           }
-          if (o.length === count) {
-            o.pop();
+          if (oo.length === count) {
+            oo.pop();
             left = {
               query: query,
               sort: sort,
-              cursor: exports.cursor(hint, o[o.length - 1]),
+              cursor: exports.cursor(hint, oo[oo.length - 1]),
               direction: -1
             };
           }
@@ -259,8 +280,22 @@ exports.find = function (ctx, done) {
           next = left;
           last = right;
         }
-        o = invert ? o.reverse() : o;
-        done(null, o, {last: last, next: next})
+        oo = invert ? oo.reverse() : oo;
+        var ooo = [];
+        async.eachSeries(oo, function (o, eachDone) {
+          utils.visibles(ctx, filter(utils.json(o)), function (err, o) {
+            if (err) {
+              return eachDone(err);
+            }
+            ooo.push(o);
+            eachDone();
+          })
+        }, function (err) {
+          if (err) {
+            return done(err);
+          }
+          done(null, ooo, {last: last, next: next})
+        });
       });
   });
 };
