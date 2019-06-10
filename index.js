@@ -223,6 +223,7 @@ exports.find = function (ctx, done) {
       return filtered;
     };
     // TODO: build proper cursor with fields in order
+    var queried = ctx.queried;
     ctx.model.find(query)
       .sort(sorter)
       .select(fields)
@@ -238,7 +239,7 @@ exports.find = function (ctx, done) {
         if (natural) {
           if (oo.length === count) {
             right = {
-              query: query,
+              query: queried,
               sort: sort,
               cursor: exports.cursor(hint, oo.pop()),
               direction: 1
@@ -246,7 +247,7 @@ exports.find = function (ctx, done) {
           }
           if (search.cursor) {
             left = {
-              query: query,
+              query: queried,
               sort: sort,
               cursor: search.cursor,
               direction: -1
@@ -255,7 +256,7 @@ exports.find = function (ctx, done) {
         } else {
           if (search.cursor) {
             right = {
-              query: query,
+              query: queried,
               sort: sort,
               cursor: search.cursor,
               direction: 1
@@ -264,7 +265,7 @@ exports.find = function (ctx, done) {
           if (oo.length === count) {
             oo.pop();
             left = {
-              query: query,
+              query: queried,
               sort: sort,
               cursor: exports.cursor(hint, oo[oo.length - 1]),
               direction: -1
