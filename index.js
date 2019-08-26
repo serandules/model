@@ -27,7 +27,7 @@ var findModelUpdatesQueueUrl = function (done) {
     return done(null, modelUpdatesQueueUrl);
   }
   utils.sqs().getQueueUrl({
-    QueueName: 'model-updates.fifo'
+    QueueName: utils.queue('model-updates') + '.fifo'
   }, function (err, o) {
     if (err) {
       return done(err);
