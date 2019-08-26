@@ -8,12 +8,53 @@ var errors = require('errors');
 var utils = require('utils');
 var validators = require('validators');
 
+var modelUpdatesQueueUrl;
+
 var validate = function (name, ctx, done) {
   if (ctx.validated) {
     return done();
   }
   var validator = validators.model[name];
   validator.call(validator.model, ctx, done);
+};
+
+var diff = function (found, updated) {
+  return utils.diff(utils.json(found), utils.json(updated));
+};
+
+var findModelUpdatesQueueUrl = function (done) {
+  if (modelUpdatesQueueUrl) {
+    return done(null, modelUpdatesQueueUrl);
+  }
+  utils.sqs().getQueueUrl({
+    QueueName: 'model-updates.fifo'
+  }, function (err, o) {
+    if (err) {
+      return done(err);
+    }
+    modelUpdatesQueueUrl = o.QueueUrl;
+    done(null, modelUpdatesQueueUrl);
+  });
+};
+
+var updated = function (ctx, id, changes, done) {
+  var data = {
+    id: id,
+    updated: changes,
+    model: ctx.model.modelName
+  };
+  findModelUpdatesQueueUrl(function (err, queueUrl) {
+    if (err) {
+      return done(err);
+    }
+    var mid = utils.uuid();
+    utils.sqs().sendMessage({
+      MessageBody: utils.stringify(data),
+      QueueUrl: queueUrl,
+      MessageGroupId: mid,
+      MessageDeduplicationId: mid
+    }, done);
+  });
 };
 
 exports.objectId = function (id) {
@@ -114,7 +155,9 @@ exports.create = function (ctx, done) {
       if (err) {
         return done(err);
       }
-      done(null, o);
+      updated(ctx, o.id, diff({}, o), function (err) {
+        done(err, o);
+      });
     });
   });
 };
@@ -131,7 +174,9 @@ exports.update = function (ctx, done) {
       if (!o) {
         return done(errors.notFound());
       }
-      done(null, o);
+      updated(ctx, o.id, diff(ctx.found, o), function (err) {
+        done(err, o);
+      });
     });
   });
 };
