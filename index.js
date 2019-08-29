@@ -37,9 +37,10 @@ var findModelUpdatesQueueUrl = function (done) {
   });
 };
 
-var updated = function (ctx, id, changes, done) {
+var updated = function (ctx, id, action, changes, done) {
   var data = {
     id: id,
+    action: action,
     updated: changes,
     model: ctx.model.modelName
   };
@@ -155,7 +156,7 @@ exports.create = function (ctx, done) {
       if (err) {
         return done(err);
       }
-      updated(ctx, o.id, diff({}, o), function (err) {
+      updated(ctx, o.id, 'create', diff({}, o), function (err) {
         done(err, o);
       });
     });
@@ -174,7 +175,7 @@ exports.update = function (ctx, done) {
       if (!o) {
         return done(errors.notFound());
       }
-      updated(ctx, o.id, diff(ctx.found, o), function (err) {
+      updated(ctx, o.id, 'update', diff(ctx.found, o), function (err) {
         done(err, o);
       });
     });
