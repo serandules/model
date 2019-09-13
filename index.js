@@ -62,11 +62,11 @@ exports.objectId = function (id) {
   return id.match(/^[0-9a-fA-F]{24}$/);
 };
 
-exports.ensureIndexes = function (schema, compounds) {
+exports.ensureIndexes = function (schema, compounds, o) {
   var paths = schema.paths;
   Object.keys(paths).forEach(function (path) {
-    var o = paths[path];
-    var options = o.options || {};
+    var oo = paths[path];
+    var options = oo.options || {};
     if (!options.searchable && !options.sortable) {
       return;
     }
@@ -81,11 +81,11 @@ exports.ensureIndexes = function (schema, compounds) {
     schema.index(index);
   });
   var extended = [];
-  compounds.forEach(function (o) {
-    schema.index(o);
-    var exd = _.cloneDeep(o);
+  compounds.forEach(function (oo) {
+    schema.index(oo, o);
+    var exd = _.cloneDeep(oo);
     exd[Object.keys(exd)[0]] = -1;
-    schema.index(exd);
+    schema.index(exd, o);
     extended.push(exd);
   });
   schema.compounds = compounds.concat(extended);
