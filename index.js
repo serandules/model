@@ -2,6 +2,7 @@ var log = require('logger')('model:index');
 var async = require('async');
 var _ = require('lodash');
 var mongoose = require('mongoose');
+var mongutils = require('mongutils');
 var ObjectId = mongoose.Types.ObjectId;
 
 var errors = require('errors');
@@ -154,6 +155,9 @@ exports.create = function (ctx, done) {
     }
     ctx.model.create(ctx.data, function (err, o) {
       if (err) {
+        if (err.code === mongutils.errors.DuplicateKey) {
+          return done(errors.conflict());
+        }
         return done(err);
       }
       updated(ctx, o.id, 'create', diff({}, o), function (err) {

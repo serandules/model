@@ -12,6 +12,7 @@
         "async": "1.*",
         "logger": "serandules/logger#master",
         "errors": "serandules/errors#master",
+        "mongutils": "serandules/mongutils#master",
         "utils": "serandules/utils#master"
     },
     "repository": {
