@@ -9,54 +9,12 @@ var errors = require('errors');
 var utils = require('utils');
 var validators = require('validators');
 
-var modelUpdatesQueueUrl;
-
 var validate = function (name, ctx, done) {
   if (ctx.validated) {
     return done();
   }
   var validator = validators.model[name];
   validator.call(validator.model, ctx, done);
-};
-
-var diff = function (found, updated) {
-  return utils.diff(utils.json(found), utils.json(updated));
-};
-
-var findModelUpdatesQueueUrl = function (done) {
-  if (modelUpdatesQueueUrl) {
-    return done(null, modelUpdatesQueueUrl);
-  }
-  utils.sqs().getQueueUrl({
-    QueueName: utils.queue('model-updates') + '.fifo'
-  }, function (err, o) {
-    if (err) {
-      return done(err);
-    }
-    modelUpdatesQueueUrl = o.QueueUrl;
-    done(null, modelUpdatesQueueUrl);
-  });
-};
-
-var updated = function (ctx, id, action, changes, done) {
-  var data = {
-    id: id,
-    action: action,
-    updated: changes,
-    model: ctx.model.modelName
-  };
-  findModelUpdatesQueueUrl(function (err, queueUrl) {
-    if (err) {
-      return done(err);
-    }
-    var mid = utils.uuid();
-    utils.sqs().sendMessage({
-      MessageBody: utils.stringify(data),
-      QueueUrl: queueUrl,
-      MessageGroupId: mid,
-      MessageDeduplicationId: mid
-    }, done);
-  });
 };
 
 exports.objectId = function (id) {
@@ -160,7 +118,7 @@ exports.create = function (ctx, done) {
         }
         return done(err);
       }
-      updated(ctx, o.id, 'create', diff({}, o), function (err) {
+      utils.notify(ctx.model.modelName, o.id, 'create', utils.diff({}, o), function (err) {
         done(err, o);
       });
     });
@@ -179,7 +137,7 @@ exports.update = function (ctx, done) {
       if (!o) {
         return done(errors.notFound());
       }
-      updated(ctx, o.id, 'update', diff(ctx.found, o), function (err) {
+      utils.notify(ctx.model.modelName, o.id, 'update', utils.diff(ctx.found, o), function (err) {
         done(err, o);
       });
     });
@@ -215,12 +173,13 @@ exports.remove = function (ctx, done) {
       if (!o.n) {
         return done(errors.notFound());
       }
-      done(null, o);
+      utils.notify(ctx.model.modelName, o.id, 'remove', {}, function (err) {
+        done(err, o);
+      });
     });
   });
 };
 
-// TODO cursor without direction is an invalid query
 exports.find = function (ctx, done) {
   validate('find', ctx, function (err) {
     if (err) {
@@ -272,7 +231,6 @@ exports.find = function (ctx, done) {
       });
       return filtered;
     };
-    // TODO: build proper cursor with fields in order
     var queried = ctx.queried;
     ctx.model.find(query)
       .sort(sorter)
