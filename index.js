@@ -280,14 +280,14 @@ exports.find = function (ctx, done) {
             };
           }
         }
-        var last;
+        var prev;
         var next;
         if (order === 1) {
           next = right;
-          last = left;
+          prev = left;
         } else {
           next = left;
-          last = right;
+          prev = right;
         }
         oo = invert ? oo.reverse() : oo;
         var ooo = [];
@@ -303,7 +303,7 @@ exports.find = function (ctx, done) {
           if (err) {
             return done(err);
           }
-          done(null, ooo, {last: last, next: next})
+          done(null, ooo, {prev: prev, next: next});
         });
       });
   });
