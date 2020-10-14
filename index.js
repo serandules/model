@@ -18,7 +18,7 @@ var validate = function (name, ctx, done) {
 };
 
 exports.objectId = function (id) {
-  return id.match(/^[0-9a-fA-F]{24}$/);
+  return id && id.match(/^[0-9a-fA-F]{24}$/);
 };
 
 exports.ensureIndexes = function (schema, compounds, o) {
